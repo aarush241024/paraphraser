@@ -6,7 +6,6 @@ from langdetect import detect, LangDetectException
 import difflib
 import nltk
 from nltk.corpus import wordnet
-from nltk.tag import PerceptronTagger
 from nltk.stem import WordNetLemmatizer
 import re
 
@@ -18,7 +17,6 @@ if not os.path.exists(nltk_data_dir):
 # Download required NLTK data with error handling
 required_resources = [
     'punkt',
-    'averaged_perceptron_tagger',
     'wordnet',
     'omw-1.4'
 ]
@@ -84,47 +82,19 @@ def get_full_language_name(lang_code):
     }
     return language_dict.get(lang_code, 'Unknown')
 
-def get_wordnet_pos(treebank_tag):
-    if treebank_tag.startswith('J'):
-        return wordnet.ADJ
-    elif treebank_tag.startswith('V'):
-        return wordnet.VERB
-    elif treebank_tag.startswith('N'):
-        return wordnet.NOUN
-    elif treebank_tag.startswith('R'):
-        return wordnet.ADV
-    else:
-        return wordnet.NOUN
-
 def get_synonyms(word):
     try:
         lemmatizer = WordNetLemmatizer()
-        
-        # Initialize tagger directly
-        tagger = PerceptronTagger()
-        pos = tagger.tag([word])[0][1]
-            
-        wordnet_pos = get_wordnet_pos(pos)
-        
-        # Lemmatize the word
-        lemma = lemmatizer.lemmatize(word, wordnet_pos)
-        
         synonyms = set()
-        for syn in wordnet.synsets(lemma):
-            for lemma in syn.lemmas():
-                synonym = lemma.name().replace('_', ' ')
-                if wordnet_pos == wordnet.VERB:
-                    if pos.startswith('VB'):
-                        synonym = lemmatizer.lemmatize(synonym, wordnet.VERB)
-                    if pos == 'VBD':  # Past tense
-                        synonym = lemmatizer.lemmatize(synonym, wordnet.VERB) + 'ed'
-                    elif pos == 'VBG':  # Gerund/present participle
-                        synonym = lemmatizer.lemmatize(synonym, wordnet.VERB) + 'ing'
-                    elif pos == 'VBN':  # Past participle
-                        synonym = lemmatizer.lemmatize(synonym, wordnet.VERB) + 'ed'
-                    elif pos == 'VBP' or pos == 'VBZ':
-                        synonym = lemmatizer.lemmatize(synonym, wordnet.VERB)
-                synonyms.add(synonym)
+        
+        # Try word as different parts of speech
+        for pos in [wordnet.NOUN, wordnet.VERB, wordnet.ADJ, wordnet.ADV]:
+            lemma = lemmatizer.lemmatize(word, pos)
+            for syn in wordnet.synsets(lemma):
+                for lemma in syn.lemmas():
+                    synonym = lemma.name().replace('_', ' ')
+                    if synonym.lower() != word.lower():  # Don't include the original word
+                        synonyms.add(synonym)
         
         return list(synonyms)[:5]  # Limit to 5 synonyms
     except Exception as e:
@@ -318,7 +288,6 @@ def main():
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Word count of paraphr
                     # Word count of paraphrased text
                     paraphrased_word_count = len(st.session_state.paraphrased_text.split())
                     st.write(f"Output word count: {paraphrased_word_count}")
