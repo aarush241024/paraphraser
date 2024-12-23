@@ -6,26 +6,29 @@ from langdetect import detect, LangDetectException
 import difflib
 import nltk
 from nltk.corpus import wordnet
-from nltk.tag import pos_tag
+from nltk.tag import PerceptronTagger
 from nltk.stem import WordNetLemmatizer
 import re
 
-# Configure NLTK data path if needed
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    # Create NLTK data directory if it doesn't exist
-    nltk_data_dir = os.path.expanduser('~/.nltk_data')
-    if not os.path.exists(nltk_data_dir):
-        os.makedirs(nltk_data_dir)
-    
-    # Download required NLTK data
-    for resource in ['punkt', 'averaged_perceptron_tagger', 'wordnet', 'omw-1.4']:
-        try:
-            nltk.download(resource, quiet=True)
-        except Exception as e:
-            st.error(f"Failed to download NLTK resource {resource}: {str(e)}")
-            st.stop()
+# Set up NLTK data
+nltk_data_dir = os.path.expanduser('~/nltk_data')
+if not os.path.exists(nltk_data_dir):
+    os.makedirs(nltk_data_dir)
+
+# Download required NLTK data with error handling
+required_resources = [
+    'punkt',
+    'averaged_perceptron_tagger',
+    'wordnet',
+    'omw-1.4'
+]
+
+for resource in required_resources:
+    try:
+        nltk.download(resource, quiet=True, raise_on_error=True)
+    except Exception as e:
+        st.error(f"Failed to download NLTK resource {resource}. Error: {str(e)}")
+        continue
 
 # Load environment variables
 load_dotenv()
@@ -97,12 +100,9 @@ def get_synonyms(word):
     try:
         lemmatizer = WordNetLemmatizer()
         
-        # Get the part of speech
-        try:
-            pos = pos_tag([word])[0][1]
-        except Exception as e:
-            st.error(f"Error in POS tagging: {str(e)}")
-            return []
+        # Initialize tagger directly
+        tagger = PerceptronTagger()
+        pos = tagger.tag([word])[0][1]
             
         wordnet_pos = get_wordnet_pos(pos)
         
@@ -318,6 +318,7 @@ def main():
                         </div>
                         """, unsafe_allow_html=True)
                     
+                    # Word count of paraphr
                     # Word count of paraphrased text
                     paraphrased_word_count = len(st.session_state.paraphrased_text.split())
                     st.write(f"Output word count: {paraphrased_word_count}")
