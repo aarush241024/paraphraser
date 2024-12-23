@@ -15,3 +15,4 @@ transformers==4.35.0
 language-tool-python==2.7.1
 pandas==2.1.1
 scikit-learn
+openai
